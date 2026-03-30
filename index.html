@@ -1,0 +1,944 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>MonitorIA - Controle de Plantões e Atendimentos</title>
+    <style>
+        /* ========== RESET E ESTILOS GLOBAIS ========== */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: system-ui, 'Segoe UI', 'Roboto', 'Helvetica Neue', sans-serif;
+        }
+
+        body {
+            background: linear-gradient(145deg, #e9f0fc 0%, #d9e3f0 100%);
+            min-height: 100vh;
+            padding: 2rem 1rem;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        /* ========== HEADER ========== */
+        .header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .header h1 {
+            font-size: 2rem;
+            background: linear-gradient(135deg, #1e3c72, #2a5298);
+            background-clip: text;
+            -webkit-background-clip: text;
+            color: transparent;
+            text-shadow: 2px 2px 6px rgba(0,0,0,0.05);
+        }
+
+        .header p {
+            color: #2c3e66;
+            margin-top: 0.5rem;
+            font-weight: 500;
+        }
+
+        /* ========== CARDS (DUAS COLUNAS) ========== */
+        .dashboard {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1.8rem;
+        }
+
+        .form-card, .report-card, .export-card {
+            background: rgba(255,255,255,0.94);
+            backdrop-filter: blur(2px);
+            border-radius: 2rem;
+            box-shadow: 0 20px 35px -12px rgba(0,0,0,0.2);
+            padding: 1.6rem 2rem;
+            transition: all 0.2s;
+            border: 1px solid rgba(255,255,255,0.5);
+        }
+
+        .form-card {
+            flex: 1.2;
+            min-width: 320px;
+        }
+
+        .report-card {
+            flex: 1;
+            min-width: 300px;
+            background: #ffffffec;
+        }
+
+        .export-card {
+            flex: 1;
+            min-width: 280px;
+            background: #f8fafc;
+        }
+
+        .card-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            border-left: 6px solid #2a6f97;
+            padding-left: 1rem;
+            margin-bottom: 1.4rem;
+            color: #1e3a5f;
+        }
+
+        /* ========== FORMULÁRIO ========== */
+        .field-group {
+            margin-bottom: 1.5rem;
+        }
+
+        label {
+            font-weight: 600;
+            color: #1f3a64;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 1px solid #cbd5e1;
+            border-radius: 1.2rem;
+            font-size: 1rem;
+            background: white;
+            transition: 0.2s;
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: #2a6f97;
+            box-shadow: 0 0 0 3px rgba(42,111,151,0.2);
+        }
+
+        /* ========== LISTA DINÂMICA DE ESTUDANTES ========== */
+        .students-section {
+            margin: 1.8rem 0 1rem;
+        }
+
+        .students-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: 0.8rem;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .students-header h3 {
+            font-size: 1.2rem;
+            color: #1f3a64;
+        }
+
+        .btn-icon {
+            background: #eef2ff;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 2rem;
+            font-weight: 600;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            color: #1e3c72;
+        }
+
+        .btn-icon:hover {
+            background: #d9e2f5;
+            transform: scale(0.98);
+        }
+
+        .student-row {
+            background: #f8fafd;
+            border-radius: 1.2rem;
+            padding: 0.8rem;
+            margin-bottom: 0.8rem;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.7rem;
+            align-items: center;
+            border: 1px solid #e2edf7;
+        }
+
+        .student-row input {
+            flex: 1;
+            min-width: 130px;
+            background: white;
+        }
+
+        .student-row .remove-student {
+            background: #fee2e2;
+            border: none;
+            border-radius: 2rem;
+            padding: 0.5rem 1rem;
+            font-weight: bold;
+            color: #b91c1c;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .student-row .remove-student:hover {
+            background: #fecaca;
+            transform: scale(0.96);
+        }
+
+        /* ========== BOTÕES PRINCIPAIS ========== */
+        .actions-bar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.8rem;
+            margin: 1.8rem 0 1rem;
+        }
+
+        .btn-primary {
+            background: #2a6f97;
+            border: none;
+            padding: 0.75rem 1.4rem;
+            border-radius: 2.2rem;
+            font-weight: bold;
+            color: white;
+            cursor: pointer;
+            transition: 0.2s;
+            flex: 1;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+        }
+
+        .btn-primary:hover {
+            background: #1f5575;
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background: #eef2ff;
+            border: 1px solid #cbd5e1;
+            padding: 0.75rem 1.2rem;
+            border-radius: 2.2rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.2s;
+            color: #1e3a5f;
+        }
+
+        .btn-secondary:hover {
+            background: #e2e8f0;
+        }
+
+        .btn-danger {
+            background: #fff0f0;
+            border: 1px solid #f5c6c6;
+            color: #b91c1c;
+        }
+
+        .btn-danger:hover {
+            background: #ffe0e0;
+        }
+
+        .btn-export {
+            background: #2c5e2e;
+            border: none;
+            color: white;
+            margin-top: 0.5rem;
+        }
+
+        .btn-export:hover {
+            background: #1e3f20;
+        }
+
+        /* ========== GERENCIAR MESES ========== */
+        .manage-months {
+            background: #f1f5f9;
+            border-radius: 1.2rem;
+            padding: 1rem;
+            margin-top: 1rem;
+        }
+
+        .manage-header {
+            display: flex;
+            gap: 0.6rem;
+            flex-wrap: wrap;
+            align-items: center;
+            margin-top: 0.5rem;
+        }
+
+        .month-select {
+            flex: 2;
+            min-width: 150px;
+        }
+
+        /* ========== RELATÓRIO ========== */
+        .report-content {
+            background: #fbfefe;
+            border-radius: 1.4rem;
+            padding: 0.2rem;
+        }
+
+        .info-block {
+            background: #eef3fc;
+            padding: 1rem;
+            border-radius: 1.2rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .info-block p {
+            margin: 0.5rem 0;
+            font-size: 1rem;
+        }
+
+        .student-list-report {
+            list-style: none;
+            margin-top: 0.8rem;
+        }
+
+        .student-list-report li {
+            background: white;
+            margin: 0.7rem 0;
+            padding: 0.8rem 1rem;
+            border-radius: 1.2rem;
+            border-left: 5px solid #2a6f97;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            font-family: monospace;
+            font-size: 0.95rem;
+        }
+
+        .badge {
+            background: #2a6f9722;
+            padding: 0.2rem 0.5rem;
+            border-radius: 1rem;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        hr {
+            margin: 1rem 0;
+            border-color: #cbd5e1;
+        }
+
+        .empty-message {
+            color: #6c757d;
+            font-style: italic;
+            text-align: center;
+            padding: 1rem;
+        }
+
+        footer {
+            margin-top: 2rem;
+            text-align: center;
+            color: #4a627a;
+            font-size: 0.8rem;
+        }
+
+        /* ========== IMPRESSÃO (PDF) ========== */
+        @media print {
+            body {
+                background: white;
+                padding: 0;
+                margin: 0;
+            }
+            .form-card, .export-card, .manage-months, .actions-bar, .students-section, .header p, footer, .btn-primary, .btn-secondary, .btn-export, .btn-icon, .manage-header {
+                display: none !important;
+            }
+            .dashboard {
+                display: block;
+            }
+            .report-card {
+                width: 100%;
+                box-shadow: none;
+                padding: 0;
+                margin: 0;
+            }
+            .info-block {
+                page-break-inside: avoid;
+                break-inside: avoid;
+            }
+            .student-list-report li {
+                border: 1px solid #ccc;
+            }
+        }
+
+        @media (max-width: 780px) {
+            .form-card, .report-card, .export-card {
+                padding: 1.2rem;
+            }
+            .student-row {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .student-row .remove-student {
+                align-self: flex-end;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>📋 MonitorIA - Controle de Monitoria</h1>
+        <p>Registro de plantões e atendimentos extraclasse | Dados salvos no navegador</p>
+    </div>
+
+    <div class="dashboard">
+        <!-- Painel de formulário -->
+        <div class="form-card">
+            <div class="card-title">📌 Registrar Atendimentos</div>
+
+            <div class="field-group">
+                <label>🗓️ Mês de Atendimento</label>
+                <input type="month" id="mesAtendimento" class="month-picker" required>
+            </div>
+
+            <div class="field-group">
+                <label>📆 Em quantos dias neste mês você realizou plantões?</label>
+                <input type="number" id="diasPlantao" min="0" value="0" step="1" placeholder="Ex: 8 dias">
+            </div>
+
+            <div class="students-section">
+                <div class="students-header">
+                    <h3>👥 Discentes atendidos</h3>
+                    <button type="button" id="addStudentBtn" class="btn-icon">+ Adicionar aluno</button>
+                </div>
+                <div id="studentsContainer"></div>
+                <small style="color: #4b6b8f;">Preencha nome, matrícula e quantas vezes buscou auxílio no mês</small>
+            </div>
+
+            <div class="actions-bar">
+                <button id="saveRecordBtn" class="btn-primary">💾 Salvar registro do mês</button>
+                <button id="clearFormBtn" class="btn-secondary">🧹 Novo / limpar formulário</button>
+            </div>
+
+            <div class="manage-months">
+                <label>📂 Carregar mês salvo</label>
+                <div class="manage-header">
+                    <select id="existingMonthsSelect" class="month-select"></select>
+                    <button id="loadMonthBtn" class="btn-secondary" style="flex:1;">📖 Carregar</button>
+                    <button id="deleteMonthBtn" class="btn-secondary btn-danger">🗑️ Excluir</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Painel de relatório do mês atual -->
+        <div class="report-card">
+            <div class="card-title">📄 Resumo do Mês Atual</div>
+            <div id="reportArea" class="report-content">
+                <div class="empty-message">Nenhum dado carregado. Preencha o formulário e clique em "Salvar registro" ou carregue um mês existente.</div>
+            </div>
+        </div>
+
+        <!-- Painel de exportação -->
+        <div class="export-card">
+            <div class="card-title">📎 Exportar Relatórios</div>
+            <p style="margin-bottom: 1rem; font-size: 0.9rem;">Exporte os dados de <strong>todos os meses</strong> para Excel ou gere um PDF com o relatório completo.</p>
+            <div style="display: flex; flex-direction: column; gap: 0.8rem;">
+                <button id="exportExcelBtn" class="btn-primary btn-export" style="background: #1f6e43;">📊 Exportar para Excel (CSV)</button>
+                <button id="exportPdfBtn" class="btn-primary btn-export" style="background: #b23c1c;">🖨️ Gerar PDF (Relatório Completo)</button>
+                <button id="exportCurrentPdfBtn" class="btn-secondary">📄 PDF do mês atual</button>
+            </div>
+            <hr style="margin: 1.2rem 0;">
+            <p style="font-size: 0.8rem; color: #2c3e66;">✔️ Os arquivos serão salvos no seu dispositivo.<br>✔️ O relatório completo inclui todos os meses registrados.</p>
+        </div>
+    </div>
+    <footer>
+        ✅ Dados salvos automaticamente no navegador (localStorage). Acesse de qualquer dispositivo com o mesmo navegador ou exporte para backup.
+    </footer>
+</div>
+
+<script>
+    // ==================== CONSTANTES E VARIÁVEIS GLOBAIS ====================
+    const STORAGE_KEY = "monitoria_plantoes";
+
+    // Elementos DOM
+    const mesInput = document.getElementById("mesAtendimento");
+    const diasInput = document.getElementById("diasPlantao");
+    const studentsContainer = document.getElementById("studentsContainer");
+    const addStudentBtn = document.getElementById("addStudentBtn");
+    const saveBtn = document.getElementById("saveRecordBtn");
+    const clearFormBtn = document.getElementById("clearFormBtn");
+    const existingMonthsSelect = document.getElementById("existingMonthsSelect");
+    const loadMonthBtn = document.getElementById("loadMonthBtn");
+    const deleteMonthBtn = document.getElementById("deleteMonthBtn");
+    const reportArea = document.getElementById("reportArea");
+    const exportExcelBtn = document.getElementById("exportExcelBtn");
+    const exportPdfBtn = document.getElementById("exportPdfBtn");
+    const exportCurrentPdfBtn = document.getElementById("exportCurrentPdfBtn");
+
+    // ==================== FUNÇÕES AUXILIARES ====================
+    function formatMonthName(monthValue) {
+        if (!monthValue) return "Mês não selecionado";
+        const [year, month] = monthValue.split("-");
+        const date = new Date(parseInt(year), parseInt(month) - 1, 1);
+        return date.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+    }
+
+    function getAllRecords() {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return {};
+        try {
+            return JSON.parse(raw);
+        } catch(e) {
+            return {};
+        }
+    }
+
+    function saveAllRecords(records) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+        updateMonthsSelect(records);
+    }
+
+    function updateMonthsSelect(records) {
+        const months = Object.keys(records).sort().reverse();
+        existingMonthsSelect.innerHTML = '<option value="">-- Selecione um mês --</option>';
+        months.forEach(monthKey => {
+            const option = document.createElement("option");
+            option.value = monthKey;
+            option.textContent = formatMonthName(monthKey);
+            existingMonthsSelect.appendChild(option);
+        });
+    }
+
+    function escapeHtml(str) {
+        if (!str) return '';
+        return str.replace(/[&<>]/g, function(m) {
+            if (m === '&') return '&amp;';
+            if (m === '<') return '&lt;';
+            if (m === '>') return '&gt;';
+            return m;
+        });
+    }
+
+    // ==================== LINHA DE ESTUDANTE ====================
+    function createStudentRow(student = { nome: "", matricula: "", vezes: 1 }) {
+        const rowDiv = document.createElement("div");
+        rowDiv.className = "student-row";
+
+        const nomeInput = document.createElement("input");
+        nomeInput.type = "text";
+        nomeInput.placeholder = "Nome completo";
+        nomeInput.value = student.nome;
+        nomeInput.style.flex = "2";
+
+        const matriculaInput = document.createElement("input");
+        matriculaInput.type = "text";
+        matriculaInput.placeholder = "Matrícula";
+        matriculaInput.value = student.matricula;
+        matriculaInput.style.flex = "1.5";
+
+        const vezesInput = document.createElement("input");
+        vezesInput.type = "number";
+        vezesInput.min = "1";
+        vezesInput.step = "1";
+        vezesInput.placeholder = "Vezes";
+        vezesInput.value = student.vezes;
+        vezesInput.style.flex = "1";
+
+        const removeBtn = document.createElement("button");
+        removeBtn.textContent = "Remover";
+        removeBtn.className = "remove-student";
+        removeBtn.type = "button";
+        removeBtn.addEventListener("click", () => rowDiv.remove());
+
+        rowDiv.appendChild(nomeInput);
+        rowDiv.appendChild(matriculaInput);
+        rowDiv.appendChild(vezesInput);
+        rowDiv.appendChild(removeBtn);
+        return rowDiv;
+    }
+
+    function renderStudentsList(studentsArray) {
+        studentsContainer.innerHTML = "";
+        if (!studentsArray || studentsArray.length === 0) {
+            studentsContainer.appendChild(createStudentRow());
+        } else {
+            studentsArray.forEach(stud => studentsContainer.appendChild(createStudentRow(stud)));
+        }
+    }
+
+    // ==================== COLETA DE DADOS DO FORMULÁRIO ====================
+    function collectFormData() {
+        const month = mesInput.value;
+        if (!month) {
+            alert("Por favor, selecione o mês de atendimento.");
+            return null;
+        }
+        const dias = parseInt(diasInput.value, 10);
+        if (isNaN(dias) || dias < 0) {
+            alert("Informe um número válido de dias de plantão (0 ou mais).");
+            return null;
+        }
+
+        const studentRows = document.querySelectorAll("#studentsContainer .student-row");
+        const students = [];
+        for (let row of studentRows) {
+            const inputs = row.querySelectorAll("input");
+            if (inputs.length >= 3) {
+                const nome = inputs[0].value.trim();
+                const matricula = inputs[1].value.trim();
+                const vezesRaw = parseInt(inputs[2].value, 10);
+                const vezes = isNaN(vezesRaw) ? 1 : (vezesRaw < 1 ? 1 : vezesRaw);
+                if (nome !== "") {
+                    students.push({ nome, matricula, vezes });
+                } else if (matricula !== "") {
+                    students.push({ nome: "Não informado", matricula, vezes });
+                }
+            }
+        }
+        if (students.length === 0 && !confirm("Nenhum discente preenchido. Deseja salvar o registro sem atendimentos?")) {
+            return null;
+        }
+        return { month, dias, students };
+    }
+
+    // ==================== RELATÓRIO ====================
+    function renderReport(monthKey, record) {
+        if (!monthKey || !record) {
+            reportArea.innerHTML = `<div class="empty-message">📭 Nenhum registro encontrado para o mês selecionado.<br>Preencha os dados e salve.</div>`;
+            return;
+        }
+
+        const monthName = formatMonthName(monthKey);
+        const dias = record.dias || 0;
+        const students = record.students || [];
+
+        let studentsHtml = '';
+        if (students.length === 0) {
+            studentsHtml = '<li class="empty-message" style="list-style:none;">⚠️ Nenhum discente registrado neste mês.</li>';
+        } else {
+            students.forEach(s => {
+                const vezesTexto = s.vezes === 1 ? 'vez' : 'vezes';
+                studentsHtml += `
+                    <li>
+                        <strong>${escapeHtml(s.nome)}</strong> / matrícula ${escapeHtml(s.matricula)} / ${s.vezes} ${vezesTexto}
+                    </li>
+                `;
+            });
+        }
+
+        const totalAtendimentos = students.reduce((acc, s) => acc + (s.vezes || 0), 0);
+
+        const html = `
+            <div class="info-block">
+                <p>📅 <strong>Mês de Atendimento:</strong> ${monthName}</p>
+                <p>🧑‍🏫 <strong>Dias de plantão:</strong> ${dias} ${dias === 1 ? 'dia' : 'dias'}</p>
+                <hr>
+                <p><strong>👩‍🎓 Discentes atendidos:</strong></p>
+                <ul class="student-list-report">
+                    ${studentsHtml}
+                </ul>
+                <div class="badge" style="margin-top:12px; display:inline-block;">📊 Total de atendimentos (somatório): ${totalAtendimentos}</div>
+            </div>
+        `;
+        reportArea.innerHTML = html;
+    }
+
+    // ==================== OPERAÇÕES PRINCIPAIS ====================
+    function saveCurrentRecord() {
+        const formData = collectFormData();
+        if (!formData) return false;
+        const { month, dias, students } = formData;
+
+        const records = getAllRecords();
+        records[month] = { dias, students };
+        saveAllRecords(records);
+        renderReport(month, records[month]);
+        if (existingMonthsSelect.querySelector(`option[value="${month}"]`)) {
+            existingMonthsSelect.value = month;
+        } else {
+            updateMonthsSelect(records);
+            existingMonthsSelect.value = month;
+        }
+        alert(`Registro de ${formatMonthName(month)} salvo com sucesso!`);
+        return true;
+    }
+
+    function loadMonthToForm(monthKey) {
+        const records = getAllRecords();
+        const record = records[monthKey];
+        if (!record) {
+            alert("Mês não encontrado.");
+            return false;
+        }
+        mesInput.value = monthKey;
+        diasInput.value = record.dias;
+        renderStudentsList(record.students);
+        renderReport(monthKey, record);
+        return true;
+    }
+
+    function deleteSelectedMonth() {
+        let monthToDelete = existingMonthsSelect.value;
+        if (!monthToDelete) {
+            monthToDelete = mesInput.value;
+            if (!monthToDelete) {
+                alert("Selecione um mês no menu suspenso ou no campo de mês para excluir.");
+                return;
+            }
+            if (!confirm(`Tem certeza que deseja excluir o registro de ${formatMonthName(monthToDelete)}?`)) return;
+            const records = getAllRecords();
+            if (records[monthToDelete]) {
+                delete records[monthToDelete];
+                saveAllRecords(records);
+                if (mesInput.value === monthToDelete) {
+                    clearForm();
+                    reportArea.innerHTML = `<div class="empty-message">Registro excluído. Nenhum dado carregado.</div>`;
+                } else {
+                    updateMonthsSelect(records);
+                }
+                alert(`Registro de ${formatMonthName(monthToDelete)} excluído.`);
+            } else {
+                alert("Esse mês não possui registro.");
+            }
+            return;
+        }
+
+        if (!confirm(`Excluir permanentemente o registro de ${formatMonthName(monthToDelete)}?`)) return;
+        const records = getAllRecords();
+        if (records[monthToDelete]) {
+            delete records[monthToDelete];
+            saveAllRecords(records);
+            if (mesInput.value === monthToDelete) {
+                clearForm();
+                reportArea.innerHTML = `<div class="empty-message">Registro removido. Nenhum dado carregado.</div>`;
+            } else {
+                updateMonthsSelect(records);
+                existingMonthsSelect.value = "";
+            }
+            alert(`Registro de ${formatMonthName(monthToDelete)} excluído.`);
+        } else {
+            alert("Registro não encontrado.");
+        }
+    }
+
+    function clearForm() {
+        const hoje = new Date();
+        const ano = hoje.getFullYear();
+        const mes = String(hoje.getMonth() + 1).padStart(2, '0');
+        mesInput.value = `${ano}-${mes}`;
+        diasInput.value = 0;
+        renderStudentsList([]);
+        reportArea.innerHTML = `<div class="empty-message">Formulário limpo. Preencha e salve para visualizar o relatório.</div>`;
+    }
+
+    // ==================== EXPORTAÇÕES ====================
+    function exportToExcel() {
+        const records = getAllRecords();
+        const months = Object.keys(records).sort();
+        if (months.length === 0) {
+            alert("Nenhum registro encontrado para exportar.");
+            return;
+        }
+
+        let csvRows = [];
+        csvRows.push(["Mês", "Dias de Plantão", "Discente", "Matrícula", "Vezes que Buscou Auxílio"]);
+
+        for (const month of months) {
+            const record = records[month];
+            const monthName = formatMonthName(month);
+            const dias = record.dias || 0;
+            const students = record.students || [];
+
+            if (students.length === 0) {
+                csvRows.push([monthName, dias, "Nenhum discente registrado", "", ""]);
+            } else {
+                for (const student of students) {
+                    csvRows.push([monthName, dias, student.nome, student.matricula, student.vezes]);
+                }
+            }
+        }
+
+        const csvContent = csvRows.map(row => row.map(cell => {
+            if (typeof cell === 'string' && (cell.includes(',') || cell.includes('"'))) {
+                return `"${cell.replace(/"/g, '""')}"`;
+            }
+            return cell;
+        }).join(",")).join("\n");
+
+        const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
+        const link = document.createElement("a");
+        const url = URL.createObjectURL(blob);
+        link.href = url;
+        link.setAttribute("download", "relatorio_monitoria_todos_meses.csv");
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        alert("Arquivo CSV gerado! Abra no Excel ou em qualquer planilha.");
+    }
+
+    function generateFullPdf() {
+        const records = getAllRecords();
+        const months = Object.keys(records).sort();
+        if (months.length === 0) {
+            alert("Nenhum registro encontrado para gerar o PDF.");
+            return;
+        }
+
+        const printWindow = window.open('', '_blank');
+        if (!printWindow) {
+            alert("Permita pop-ups para gerar o PDF.");
+            return;
+        }
+
+        let htmlContent = `
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <title>Relatório Completo - Monitoria</title>
+                <style>
+                    body { font-family: Arial, sans-serif; margin: 2rem; }
+                    h1 { color: #1e3c72; text-align: center; }
+                    h2 { color: #2a6f97; margin-top: 1.5rem; border-bottom: 1px solid #ccc; }
+                    .mes-block { margin-bottom: 2rem; page-break-inside: avoid; }
+                    table { width: 100%; border-collapse: collapse; margin: 1rem 0; }
+                    th, td { border: 1px solid #999; padding: 8px; text-align: left; }
+                    th { background: #eef2ff; }
+                    .footer { text-align: center; margin-top: 2rem; font-size: 0.8rem; color: gray; }
+                </style>
+            </head>
+            <body>
+                <h1>📋 Relatório de Monitoria - Todos os Meses</h1>
+                <p style="text-align:center;">Gerado em ${new Date().toLocaleString('pt-BR')}</p>
+        `;
+
+        for (const month of months) {
+            const record = records[month];
+            const monthName = formatMonthName(month);
+            const dias = record.dias || 0;
+            const students = record.students || [];
+
+            htmlContent += `<div class="mes-block">`;
+            htmlContent += `<h2>📅 ${monthName}</h2>`;
+            htmlContent += `<p><strong>Dias de plantão no mês:</strong> ${dias} ${dias === 1 ? 'dia' : 'dias'}</p>`;
+            if (students.length === 0) {
+                htmlContent += `<p><em>Nenhum discente registrado neste mês.</em></p>`;
+            } else {
+                htmlContent += `
+                    <table>
+                        <thead>
+                            <th>Nome</th><th>Matrícula</th><th>Vezes que buscou auxílio</th>
+                        </thead>
+                        <tbody>
+                `;
+                students.forEach(s => {
+                    htmlContent += `<tr><td>${escapeHtml(s.nome)}</td><td>${escapeHtml(s.matricula)}</td><td>${s.vezes}</td></tr>`;
+                });
+                htmlContent += `</tbody></table>`;
+            }
+            htmlContent += `</div><hr>`;
+        }
+
+        htmlContent += `<div class="footer">Sistema de Controle de Monitoria - Dados salvos localmente</div>`;
+        htmlContent += `</body></html>`;
+
+        printWindow.document.write(htmlContent);
+        printWindow.document.close();
+        printWindow.focus();
+        printWindow.print();
+    }
+
+    function printCurrentMonth() {
+        const currentMonth = mesInput.value;
+        if (!currentMonth) {
+            alert("Selecione um mês para gerar o PDF.");
+            return;
+        }
+        const records = getAllRecords();
+        const record = records[currentMonth];
+        if (!record) {
+            alert("Não há dados salvos para este mês. Salve antes de gerar o PDF.");
+            return;
+        }
+
+        const printWindow = window.open('', '_blank');
+        if (!printWindow) {
+            alert("Permita pop-ups para gerar o PDF.");
+            return;
+        }
+
+        // Copia os estilos principais para manter a aparência
+        const styles = document.querySelector('style').innerHTML;
+        const reportHTML = document.getElementById("reportArea").cloneNode(true).innerHTML;
+
+        const html = `
+            <!DOCTYPE html>
+            <html>
+            <head><meta charset="UTF-8"><title>Relatório - ${formatMonthName(currentMonth)}</title>
+            <style>${styles}</style>
+            <style>
+                body { margin: 2rem; background: white; }
+                .form-card, .export-card, .manage-months, .actions-bar, .students-section, .header p, footer, .btn-primary, .btn-secondary, .btn-export, .btn-icon, .manage-header {
+                    display: none !important;
+                }
+                .report-card { width: 100%; box-shadow: none; padding: 0; margin: 0; background: white; }
+                .info-block { break-inside: avoid; }
+            </style>
+            </head>
+            <body>
+                <h1 style="text-align:center; color:#1e3c72;">MonitorIA - Relatório Mensal</h1>
+                ${reportHTML}
+                <p style="margin-top:2rem; text-align:center;">Gerado em ${new Date().toLocaleString('pt-BR')}</p>
+            </body>
+            </html>
+        `;
+        printWindow.document.write(html);
+        printWindow.document.close();
+        printWindow.print();
+    }
+
+    // ==================== EVENT LISTENERS E INICIALIZAÇÃO ====================
+    addStudentBtn.addEventListener("click", () => studentsContainer.appendChild(createStudentRow()));
+    saveBtn.addEventListener("click", saveCurrentRecord);
+    clearFormBtn.addEventListener("click", clearForm);
+    loadMonthBtn.addEventListener("click", () => {
+        const selected = existingMonthsSelect.value;
+        if (!selected) {
+            alert("Escolha um mês na lista para carregar.");
+            return;
+        }
+        loadMonthToForm(selected);
+    });
+    deleteMonthBtn.addEventListener("click", deleteSelectedMonth);
+    exportExcelBtn.addEventListener("click", exportToExcel);
+    exportPdfBtn.addEventListener("click", generateFullPdf);
+    exportCurrentPdfBtn.addEventListener("click", printCurrentMonth);
+
+    mesInput.addEventListener("change", () => {
+        const monthNow = mesInput.value;
+        const records = getAllRecords();
+        if (records[monthNow]) {
+            if (confirm(`Já existe um registro para ${formatMonthName(monthNow)}. Deseja carregá-lo?`)) {
+                loadMonthToForm(monthNow);
+            } else {
+                reportArea.innerHTML = `<div class="empty-message">Mês alterado. Utilize "Salvar registro" para guardar as informações.</div>`;
+            }
+        } else {
+            reportArea.innerHTML = `<div class="empty-message">Nenhum registro encontrado para este mês. Preencha os dados e salve.</div>`;
+        }
+    });
+
+    function init() {
+        const records = getAllRecords();
+        updateMonthsSelect(records);
+        const hoje = new Date();
+        const ano = hoje.getFullYear();
+        const mes = String(hoje.getMonth() + 1).padStart(2, '0');
+        mesInput.value = `${ano}-${mes}`;
+        diasInput.value = 0;
+        renderStudentsList([]);
+        if (records[mesInput.value]) {
+            loadMonthToForm(mesInput.value);
+        } else {
+            reportArea.innerHTML = `<div class="empty-message">👋 Nenhum dado para o mês atual. Preencha o formulário e clique em Salvar.</div>`;
+        }
+    }
+    init();
+</script>
+</body>
+</html>
