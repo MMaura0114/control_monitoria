@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>MonitorIA - Controle de Plantões e Atendimentos</title>
+    <title>Monitoria - Controle de Plantões e Atendimentos
+    Desenvolvedora MM</title>
     <style>
         /* ========== RESET E ESTILOS GLOBAIS ========== */
         * {
@@ -521,6 +522,7 @@
      *   nome: string,
      *   matricula: string,
      *   totalVezes: number,
+     *   totalDias: number,          // soma dos dias de plantão nos meses em que o aluno apareceu
      *   meses: [ { monthKey, monthName, dias, vezes } ]
      * }
      */
@@ -542,12 +544,14 @@
                         nome: nome,
                         matricula: matricula,
                         totalVezes: 0,
+                        totalDias: 0,
                         meses: []
                     });
                 }
                 const entry = studentsMap.get(matricula);
-                // Atualiza total
+                // Atualiza totais
                 entry.totalVezes += vezes;
+                entry.totalDias += dias;  // soma dos dias de plantão dos meses em que apareceu
                 // Adiciona o mês
                 entry.meses.push({
                     monthKey: monthKey,
@@ -807,17 +811,26 @@
         }
 
         // Linha separadora
-        csvRows.push([""]); // linha em branco
-        csvRows.push(["RESUMO POR ALUNO (TOTAL GERAL E POR MÊS)"]);
+        csvRows.push([""]);
+        csvRows.push(["RESUMO POR ALUNO (ACUMULADO) - SOMA DOS ATENDIMENTOS E TOTAL DE DIAS DE PLANTÃO NOS MESES EM QUE APARECEU"]);
 
         // Agregação por aluno
         const aggregated = aggregateStudentData(records);
         for (const student of aggregated) {
-            // Linha com nome, matrícula e total
-            csvRows.push([`Aluno: ${student.nome}`, `Matrícula: ${student.matricula}`, `Total: ${student.totalVezes}`, "", ""]);
+            // Linha principal: nome, matrícula, total de vezes, total de dias
+            csvRows.push([
+                `Aluno: ${student.nome}`,
+                `Matrícula: ${student.matricula}`,
+                `Total de atendimentos: ${student.totalVezes}`,
+                `Total de dias de plantão (meses em que apareceu): ${student.totalDias}`,
+                ""
+            ]);
             // Detalhamento por mês
-            for (const mes of student.meses) {
-                csvRows.push([`   ${mes.monthName}`, `Dias plantão: ${mes.dias}`, `Vezes: ${mes.vezes}`, "", ""]);
+            if (student.meses.length > 0) {
+                csvRows.push(["", "Mês", "Dias plantão no mês", "Vezes no mês", ""]);
+                for (const mes of student.meses) {
+                    csvRows.push(["", mes.monthName, mes.dias, mes.vezes, ""]);
+                }
             }
             csvRows.push([""]); // separador entre alunos
         }
@@ -841,7 +854,7 @@
         link.click();
         document.body.removeChild(link);
         URL.revokeObjectURL(url);
-        alert("Arquivo CSV gerado! Contém os dados detalhados por mês e um resumo por aluno.");
+        alert("Arquivo CSV gerado! Contém os dados detalhados por mês e um resumo por aluno com totais acumulados.");
     }
 
     function generateFullPdf() {
@@ -886,16 +899,21 @@
                 <p style="text-align:center;">Gerado em ${new Date().toLocaleString('pt-BR')}</p>
         `;
 
-        // Seção de resumo por aluno
+        // Seção de resumo por aluno (com totais acumulados)
         if (aggregated.length > 0) {
-            htmlContent += `<h2>📊 Resumo por Aluno (Total Geral e por Mês)</h2>`;
+            htmlContent += `<h2>📊 Resumo por Aluno (Acumulado)</h2>`;
             for (const student of aggregated) {
                 htmlContent += `<div class="student-summary">`;
                 htmlContent += `<h3>👤 ${escapeHtml(student.nome)} (Matrícula: ${escapeHtml(student.matricula)})</h3>`;
-                htmlContent += `<p><strong>Total de atendimentos em todos os meses:</strong> ${student.totalVezes}</p>`;
+                htmlContent += `<p><strong>Total de atendimentos (vezes):</strong> ${student.totalVezes}</p>`;
+                htmlContent += `<p><strong>Total de dias de plantão (nos meses em que apareceu):</strong> ${student.totalDias}</p>`;
                 if (student.meses.length > 0) {
                     htmlContent += `<table>
-                        <thead><tr><th>Mês</th><th>Dias de Plantão no Mês</th><th>Vezes que buscou auxílio</th></tr></thead>
+                        <thead>
+                            <th>Mês</th>
+                            <th>Dias de Plantão no Mês</th>
+                            <th>Vezes que buscou auxílio</th>
+                        </thead>
                         <tbody>`;
                     for (const mes of student.meses) {
                         htmlContent += `<tr>
