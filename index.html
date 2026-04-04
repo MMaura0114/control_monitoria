@@ -3,8 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>Monitoria - Controle de Plantões e Atendimentos
-    Desenvolvedora MM</title>
+    <title>MonitorIA - Controle de Plantões e Atendimentos</title>
     <style>
         /* ========== RESET E ESTILOS GLOBAIS ========== */
         * {
@@ -46,7 +45,7 @@
             font-weight: 500;
         }
 
-        /* ========== CARDS (DUAS COLUNAS) ========== */
+        /* ========== CARDS ========== */
         .dashboard {
             display: flex;
             flex-wrap: wrap;
@@ -170,9 +169,9 @@
             border: 1px solid #e2edf7;
         }
 
-        .student-row input {
+        .student-row input, .student-row select {
             flex: 1;
-            min-width: 130px;
+            min-width: 120px;
             background: white;
         }
 
@@ -306,7 +305,6 @@
             border-radius: 1.2rem;
             border-left: 5px solid #2a6f97;
             box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-            font-family: monospace;
             font-size: 0.95rem;
         }
 
@@ -407,7 +405,7 @@
                     <button type="button" id="addStudentBtn" class="btn-icon">+ Adicionar aluno</button>
                 </div>
                 <div id="studentsContainer"></div>
-                <small style="color: #4b6b8f;">Preencha nome, matrícula e quantas vezes buscou auxílio no mês</small>
+                <small style="color: #4b6b8f;">Preencha nome, matrícula, data do atendimento (opcional) e quantas vezes buscou auxílio no mês</small>
             </div>
 
             <div class="actions-bar">
@@ -452,7 +450,7 @@
 </div>
 
 <script>
-    // ==================== CONSTANTES E VARIÁVEIS GLOBAIS ====================
+    // ==================== CONSTANTES ====================
     const STORAGE_KEY = "monitoria_plantoes";
 
     // Elementos DOM
@@ -514,20 +512,17 @@
         });
     }
 
+    // Formatar data para exibição (dd/mm/aaaa)
+    function formatDate(dateStr) {
+        if (!dateStr) return '';
+        const parts = dateStr.split('-');
+        if (parts.length !== 3) return dateStr;
+        return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    }
+
     // ==================== AGREGAÇÃO POR ALUNO ====================
-    /**
-     * Agrega os dados por matrícula.
-     * Retorna um array de objetos:
-     * {
-     *   nome: string,
-     *   matricula: string,
-     *   totalVezes: number,
-     *   totalDias: number,          // soma dos dias de plantão nos meses em que o aluno apareceu
-     *   meses: [ { monthKey, monthName, dias, vezes } ]
-     * }
-     */
     function aggregateStudentData(records) {
-        const studentsMap = new Map(); // key = matricula
+        const studentsMap = new Map();
 
         for (const [monthKey, record] of Object.entries(records)) {
             const monthName = formatMonthName(monthKey);
@@ -538,6 +533,7 @@
                 const matricula = student.matricula || 'SEM_MATRICULA';
                 const nome = student.nome || 'NÃO INFORMADO';
                 const vezes = student.vezes || 0;
+                const dataAtendimento = student.data || ''; // data opcional
 
                 if (!studentsMap.has(matricula)) {
                     studentsMap.set(matricula, {
@@ -549,27 +545,25 @@
                     });
                 }
                 const entry = studentsMap.get(matricula);
-                // Atualiza totais
                 entry.totalVezes += vezes;
-                entry.totalDias += dias;  // soma dos dias de plantão dos meses em que apareceu
-                // Adiciona o mês
+                entry.totalDias += dias;
                 entry.meses.push({
                     monthKey: monthKey,
                     monthName: monthName,
                     dias: dias,
-                    vezes: vezes
+                    vezes: vezes,
+                    data: dataAtendimento
                 });
             }
         }
-        // Ordenar os meses dentro de cada aluno por data
         for (const entry of studentsMap.values()) {
             entry.meses.sort((a, b) => a.monthKey.localeCompare(b.monthKey));
         }
         return Array.from(studentsMap.values());
     }
 
-    // ==================== LINHA DE ESTUDANTE ====================
-    function createStudentRow(student = { nome: "", matricula: "", vezes: 1 }) {
+    // ==================== LINHA DE ESTUDANTE (COM DATA) ====================
+    function createStudentRow(student = { nome: "", matricula: "", vezes: 1, data: "" }) {
         const rowDiv = document.createElement("div");
         rowDiv.className = "student-row";
 
@@ -585,13 +579,19 @@
         matriculaInput.value = student.matricula;
         matriculaInput.style.flex = "1.5";
 
+        const dataInput = document.createElement("input");
+        dataInput.type = "date";
+        dataInput.placeholder = "Data (opcional)";
+        dataInput.value = student.data || "";
+        dataInput.style.flex = "1";
+
         const vezesInput = document.createElement("input");
         vezesInput.type = "number";
         vezesInput.min = "1";
         vezesInput.step = "1";
         vezesInput.placeholder = "Vezes";
         vezesInput.value = student.vezes;
-        vezesInput.style.flex = "1";
+        vezesInput.style.flex = "0.8";
 
         const removeBtn = document.createElement("button");
         removeBtn.textContent = "Remover";
@@ -601,6 +601,7 @@
 
         rowDiv.appendChild(nomeInput);
         rowDiv.appendChild(matriculaInput);
+        rowDiv.appendChild(dataInput);
         rowDiv.appendChild(vezesInput);
         rowDiv.appendChild(removeBtn);
         return rowDiv;
@@ -632,15 +633,16 @@
         const students = [];
         for (let row of studentRows) {
             const inputs = row.querySelectorAll("input");
-            if (inputs.length >= 3) {
+            if (inputs.length >= 4) {
                 const nome = inputs[0].value.trim();
                 const matricula = inputs[1].value.trim();
-                const vezesRaw = parseInt(inputs[2].value, 10);
+                const data = inputs[2].value; // data no formato YYYY-MM-DD
+                const vezesRaw = parseInt(inputs[3].value, 10);
                 const vezes = isNaN(vezesRaw) ? 1 : (vezesRaw < 1 ? 1 : vezesRaw);
                 if (nome !== "") {
-                    students.push({ nome, matricula, vezes });
+                    students.push({ nome, matricula, vezes, data });
                 } else if (matricula !== "") {
-                    students.push({ nome: "Não informado", matricula, vezes });
+                    students.push({ nome: "Não informado", matricula, vezes, data });
                 }
             }
         }
@@ -667,9 +669,10 @@
         } else {
             students.forEach(s => {
                 const vezesTexto = s.vezes === 1 ? 'vez' : 'vezes';
+                const dataTexto = s.data ? ` - Data: ${formatDate(s.data)}` : '';
                 studentsHtml += `
                     <li>
-                        <strong>${escapeHtml(s.nome)}</strong> / matrícula ${escapeHtml(s.matricula)} / ${s.vezes} ${vezesTexto}
+                        <strong>${escapeHtml(s.nome)}</strong> / matrícula ${escapeHtml(s.matricula)} / ${s.vezes} ${vezesTexto}${dataTexto}
                     </li>
                 `;
             });
@@ -780,7 +783,7 @@
         reportArea.innerHTML = `<div class="empty-message">Formulário limpo. Preencha e salve para visualizar o relatório.</div>`;
     }
 
-    // ==================== EXPORTAÇÕES (COM AGREGAÇÃO POR ALUNO) ====================
+    // ==================== EXPORTAÇÕES (COM DATA DE ATENDIMENTO) ====================
     function exportToExcel() {
         const records = getAllRecords();
         const months = Object.keys(records).sort();
@@ -792,9 +795,9 @@
         const csvRows = [];
 
         // Cabeçalho
-        csvRows.push(["Mês", "Dias de Plantão", "Discente", "Matrícula", "Vezes que Buscou Auxílio"]);
+        csvRows.push(["Mês", "Dias de Plantão", "Discente", "Matrícula", "Data do Atendimento", "Vezes que Buscou Auxílio"]);
 
-        // Dados detalhados por mês (mantido igual)
+        // Dados detalhados por mês
         for (const month of months) {
             const record = records[month];
             const monthName = formatMonthName(month);
@@ -802,40 +805,40 @@
             const students = record.students || [];
 
             if (students.length === 0) {
-                csvRows.push([monthName, dias, "Nenhum discente registrado", "", ""]);
+                csvRows.push([monthName, dias, "Nenhum discente registrado", "", "", ""]);
             } else {
                 for (const student of students) {
-                    csvRows.push([monthName, dias, student.nome, student.matricula, student.vezes]);
+                    const dataFormatada = student.data ? formatDate(student.data) : "";
+                    csvRows.push([monthName, dias, student.nome, student.matricula, dataFormatada, student.vezes]);
                 }
             }
         }
 
         // Linha separadora
         csvRows.push([""]);
-        csvRows.push(["RESUMO POR ALUNO (ACUMULADO) - SOMA DOS ATENDIMENTOS E TOTAL DE DIAS DE PLANTÃO NOS MESES EM QUE APARECEU"]);
+        csvRows.push(["RESUMO POR ALUNO (ACUMULADO) - SOMA DOS ATENDIMENTOS, TOTAL DE DIAS E DATAS"]);
 
         // Agregação por aluno
         const aggregated = aggregateStudentData(records);
         for (const student of aggregated) {
-            // Linha principal: nome, matrícula, total de vezes, total de dias
             csvRows.push([
                 `Aluno: ${student.nome}`,
                 `Matrícula: ${student.matricula}`,
                 `Total de atendimentos: ${student.totalVezes}`,
                 `Total de dias de plantão (meses em que apareceu): ${student.totalDias}`,
+                "",
                 ""
             ]);
-            // Detalhamento por mês
             if (student.meses.length > 0) {
-                csvRows.push(["", "Mês", "Dias plantão no mês", "Vezes no mês", ""]);
+                csvRows.push(["", "Mês", "Dias plantão", "Vezes", "Data", ""]);
                 for (const mes of student.meses) {
-                    csvRows.push(["", mes.monthName, mes.dias, mes.vezes, ""]);
+                    const dataFormatada = mes.data ? formatDate(mes.data) : "";
+                    csvRows.push(["", mes.monthName, mes.dias, mes.vezes, dataFormatada, ""]);
                 }
             }
-            csvRows.push([""]); // separador entre alunos
+            csvRows.push([""]);
         }
 
-        // Gerar CSV
         const csvContent = csvRows.map(row => row.map(cell => {
             if (cell === undefined || cell === null) cell = "";
             const str = String(cell);
@@ -854,7 +857,7 @@
         link.click();
         document.body.removeChild(link);
         URL.revokeObjectURL(url);
-        alert("Arquivo CSV gerado! Contém os dados detalhados por mês e um resumo por aluno com totais acumulados.");
+        alert("Arquivo CSV gerado! Inclui datas de atendimento.");
     }
 
     function generateFullPdf() {
@@ -871,7 +874,6 @@
             return;
         }
 
-        // Agregação por aluno
         const aggregated = aggregateStudentData(records);
 
         let htmlContent = `
@@ -890,7 +892,6 @@
                     th, td { border: 1px solid #999; padding: 8px; text-align: left; }
                     th { background: #eef2ff; }
                     .student-summary { margin-bottom: 1.5rem; page-break-inside: avoid; }
-                    .student-summary table { margin: 0.5rem 0; }
                     .footer { text-align: center; margin-top: 2rem; font-size: 0.8rem; color: gray; }
                 </style>
             </head>
@@ -899,7 +900,7 @@
                 <p style="text-align:center;">Gerado em ${new Date().toLocaleString('pt-BR')}</p>
         `;
 
-        // Seção de resumo por aluno (com totais acumulados)
+        // Resumo por aluno
         if (aggregated.length > 0) {
             htmlContent += `<h2>📊 Resumo por Aluno (Acumulado)</h2>`;
             for (const student of aggregated) {
@@ -911,15 +912,18 @@
                     htmlContent += `<table>
                         <thead>
                             <th>Mês</th>
-                            <th>Dias de Plantão no Mês</th>
-                            <th>Vezes que buscou auxílio</th>
+                            <th>Dias de Plantão</th>
+                            <th>Vezes</th>
+                            <th>Data do Atendimento</th>
                         </thead>
                         <tbody>`;
                     for (const mes of student.meses) {
+                        const dataFormatada = mes.data ? formatDate(mes.data) : "";
                         htmlContent += `<tr>
                             <td>${escapeHtml(mes.monthName)}</td>
                             <td>${mes.dias}</td>
                             <td>${mes.vezes}</td>
+                            <td>${dataFormatada}</td>
                         </tr>`;
                     }
                     htmlContent += `</tbody></table>`;
@@ -930,7 +934,7 @@
             }
         }
 
-        // Detalhamento por mês (mantido)
+        // Detalhamento por mês
         htmlContent += `<h2>📅 Detalhamento por Mês</h2>`;
         for (const month of months) {
             const record = records[month];
@@ -946,11 +950,14 @@
             } else {
                 htmlContent += `
                     <table>
-                        <thead><tr><th>Nome</th><th>Matrícula</th><th>Vezes que buscou auxílio</th></tr></thead>
+                        <thead>
+                            <th>Nome</th><th>Matrícula</th><th>Data</th><th>Vezes</th>
+                        </thead>
                         <tbody>
                 `;
                 students.forEach(s => {
-                    htmlContent += `<tr><td>${escapeHtml(s.nome)}</td><td>${escapeHtml(s.matricula)}</td><td>${s.vezes}</td></tr>`;
+                    const dataFormatada = s.data ? formatDate(s.data) : "";
+                    htmlContent += `<tr><td>${escapeHtml(s.nome)}</td><td>${escapeHtml(s.matricula)}</td><td>${dataFormatada}</td><td>${s.vezes}</td></tr>`;
                 });
                 htmlContent += `</tbody></table>`;
             }
